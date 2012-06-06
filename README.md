@@ -2,7 +2,7 @@ JReally
 =======
 
 一个适用的JS 选择器，一个从适用角度出发的选择器
-
+A practical js selector JReally
 
 <h5>支持的选择器种类如下：</h5>
   <ul>
