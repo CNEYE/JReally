@@ -1,5 +1,5 @@
 /**
- * JReally 选择器
+ * JReally 选择器 A practical js selector
  * 从适用角度出发的一个选择器
  * 
  * 支持的选择器类型
