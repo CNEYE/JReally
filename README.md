@@ -23,7 +23,7 @@ A practical js selector JReally
 JReally的速度快于JQuery 1.5-4倍。
 JReally的速度同样快于YUI的选择器</pre>
 
-<h5>适用方法：</h5>
+<h5>调用方法：</h5>
 <pre>JReally('#uoeye > b.c ,div.class .input[type=text]')</pre>
 
 作者：深蓝剑 (wjstudy[at]qq.com)如果有什么意见、建议、BUG，请反馈给作者。
