@@ -85,7 +85,7 @@
 				}:function(classname,context){
 					var ret =[];
 					for(var i=0,expr = this.CLASSEXP(classname)
-						,cname=context.getElemntsByTagName('*'),len=cname.length;i<len;i++){
+						,cname=context.getElementsByTagName('*'),len=cname.length;i<len;i++){
 							( expr.test(cname[i].className) ) && ret.push(cname[i]);
 					}
 					return ret;
