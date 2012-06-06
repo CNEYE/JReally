@@ -57,6 +57,7 @@
 			}
 			
 			/*关闭系统选择器*/
+			
 			match = 1 && context.querySelectorAll 
 						? context.querySelectorAll(selector)
 						: ( (simple = selector.match(exprsimple)) 
