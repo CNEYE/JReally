@@ -57,7 +57,7 @@
 			}
 			
 			/*关闭系统选择器*/
-			match = 0 && context.querySelectorAll 
+			match = 1 && context.querySelectorAll 
 						? context.querySelectorAll(selector)
 						: ( (simple = selector.match(exprsimple)) 
 							? this.DIRECT(simple,context)
@@ -78,7 +78,7 @@
 		//根据class获取元素
 		CLASSNAME : function(){
 			/*关闭系统class选择器*/
-			return 0 && document.getElementsByClassName
+			return 1 && document.getElementsByClassName
 				? function(classname,context){
 					return context.getElementsByClassName(classname);
 					
