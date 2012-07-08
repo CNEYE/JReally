@@ -1,6 +1,7 @@
 JReally
 ----------
 ----------
+完整的CSS3选择器见iCeet.js
 
 一个适用的JS 选择器，一个从适用角度出发的选择器
 A practical js selector JReally
