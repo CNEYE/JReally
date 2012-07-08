@@ -64,7 +64,7 @@
 							? this.DIRECT(simple,context)
 							: this.COMPOSE(selector,context) );
 						
-			return this.CONVERT(match);
+			return this.FIXPUSH([],match);
 		},
 		//这里是性能提升的关键。在存在class选择器的时候
 		//可以提升3-5倍以上
@@ -117,7 +117,7 @@
 							}));
 						break;
 					case ',':
-						PUSH.apply(ret,front);
+						this.FIXPUSH(ret,front);
 						front = this.DIRECT(muster[++i],context);
 						break;
 					case '+':
@@ -149,18 +149,18 @@
 				}
 			}
 			
-			front && PUSH.apply(ret,front);
+			front && this.FIXPUSH(ret,front);
 			
 			return ret;
 		},
 		//遍历器
-		ITERATE : function(front,callee){
+		ITERATE : function(front,iterate){
 			
 			var ret =[],elem;
 			for(var i=0,len=front.length;i<len;i++){
-				if(elem = callee(front[i])){
+				if( elem = iterate(front[i]) ){
 					elem.length ? 
-						PUSH.apply(ret,elem) : ret.push(elem);
+						this.FIXPUSH(ret,elem) : ret.push(elem);
 				}
 			}
 			return ret;
@@ -180,7 +180,7 @@
 						expand ? ( expand === '#' 
 								  ? ret.push(document.getElementById(name))
 								  : PUSH.apply(ret,this.CLASSNAME(name,item)) ) 
-						       :  PUSH.apply(ret,item.getElementsByTagName(name))
+						       :  this.FIXPUSH(ret,item.getElementsByTagName(name))
 					}
 				}
 				
@@ -209,13 +209,15 @@
 			
 			return ret;
 		},
-		CONVERT	: function(match){
-			
-			this.length = 0;
-			for(var i=0,len=match.length;i<len;i++){
-				/*(match[i].nodeType === 1) && */(this[this.length++] = match[i]);
+		FIXPUSH : function(result,other){
+			try{
+				PUSH.apply(result,other);
+			}catch(e){
+				for(var i=0,len=other.length;i<len;i++){
+					result.push(other[i]);
+				}
 			}
-			return this;
+			return result;
 		},
         version : '1.0'
 	};
