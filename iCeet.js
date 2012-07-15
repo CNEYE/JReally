@@ -15,14 +15,18 @@ var iCeet 	= function(selector,context){
 	aider 	= function(fn,div){fn(div=DOC.createElement('div'));div=null},
 	mix 	= function(target,source){for(var p in source){target[p]=source[p]}},
 	bone 	= function(a,v,ia){var ret={};a = a.match ? a.split(','):a;
-			ia=(v instanceof Array);for(var i=0,len=a.length;i<len;i++){ret[a[i]]=ia?v[i]:v}},
+				ia=(v instanceof Array);for(var i=0,len=a.length;i<len;i++){ret[a[i]]=ia?v[i]:v}},
 	
-	rxpath  = /(^[@\/]|node\(\)|^[^\/]+\/{1,2}\w+|\.\.|\[@)/i,
-	rquick  = /^([#.]?)(\w+)$/,
-	//the selector splitter
-	rsplit  = /\s*([+,~>\s])[^\w=+~>\.#]?\s*/,
 	rexcis  = /(?:([#.]?)(\w+\\:\w+|\w+)|(?:\[([\w-_]+)([^\w'"]+)['"]?([^'"\]]+)['"]?\])|(?::([\w-]+)(?:\(([^\)]+)\))?))/g,
 	rchild  = /(nth|first|last|only)-(child|of-type|last-child|last-of-type)/i，
+	rxpath  = /(^[@\/]|node\(\)|^[^\/]+\/{1,2}\w+|\.\.|\[@)/i,
+	//the selector splitter
+	rsplit  = /\s*([+,~>\s])[^\w=+~>\.#]?\s*/,
+	rinputs = /input|select|textarea|button/i,
+	rformact= /input|button/i,
+	rquick  = /^([#.]?)(\w+)$/,
+	
+	rheader = /h\d/i,
 	
 	PUSH 	= Array.prototype.push,
 	UNDEF	= undefined,
@@ -99,12 +103,48 @@ var iCeet 	= function(selector,context){
 		contains: function(a,b){
 			return a.contains ? a!= b && a.contanins(b) : !!(a.compareDocumentPosition(b) & 16);
 		},
+		visible: function(type){
+			return function(item,visible){
+				if(item.type !=='hidden'){
+					if( visible = issert.style('display') || 
+							aider.style('visibility') || aider.style('visible')){
+						visible = visible == 'none' || visible == 'hidden' || !item.offsetHeight&&!item.offsetWeight;
+						return type ? visible === false : visible === true;
+					}
+				}
+			}
+		},
+		creatinp: function(type){
+			return function(item){
+				return item.nodeName == 'INPUT' && item.type = type;
+			}
+		},
+		getText: function(child,childs){
+			if((childs = child.childNodes) && childs.length){
+				for(var i=0,ret = '',node,len = childs.length;i<len;i++){
+					if((node = childs[i]).nodeType === 3 || node.nodeType === 4){
+						ret += node.nodeValue;
+					}else if(node.nodeType !== 8){
+						ret += this.getText(node);
+					}
+				}
+				return ret;
+			}
+			return child.innerHTML;
+		},
+		style: function(){
+			return Global.getComputedStyle ? function(item,style){
+					return Global.getComputedStyle(item,null)[style];
+				} : function(item,style){
+					return item.currentStyle[style];
+			}
+		}(),
 		//iterate arr/elem/object
 		iterate: function(result,iterate,match,after){
 			var ret =[],idx=-1,res;
 			
 			while(res = result[++idx]){
-				if(res = iterate(res,idx,match,result)){	
+				if(res.nodeType != 3 && (res = iterate(res,idx,match,result))){	
 					if (res === true) {
 						ret.push(result[idx]);
 					} else {
@@ -114,7 +154,6 @@ var iCeet 	= function(selector,context){
 				}
 			}
 			after && after(result);
-
 			return ret;
 		},
 		ID: function(){
@@ -191,18 +230,19 @@ var iCeet 	= function(selector,context){
 						   'tabIndex,readOnly,htmlFor,className,maxLength,cellSpacing,cellPadding,rowSpan,colSpan,useMap,frameBorder,contentEditable'),
 				//these attribute can automatic correction when we use 'getAttribute' to get it!
 				autoAttr = bone('href,action,cite,codebase,data,longdesc,lowsrc,src,usemap',1);
-			return function(name,context,isxml,def){
+			return function(name,context,isxml,de){
 				
-				def = def === undefined ? '' : null;
+				var ret = null,
+					def = de === UNDEF ? '' : null;
 
 				if(!isxml && BUGGY.attr ){
 					if(name.toLowerCase() in autoAttr){
-						return context.getAttribute(name,2) || def;
+						return (ret = context.getAttribute(name,2)) === null ? def : ret;
 					}
 					name = fixAttr[name] ||name;
 				}
 
-				return context.getAttribute(name) || def;
+				return (ret = context.getAttribute(name)) === null ? def : ret;
 			}
 		}(),
 		FILTER: {
@@ -216,13 +256,13 @@ var iCeet 	= function(selector,context){
 			},
 			//hasAttribute
 			ATTR: function(item,name,isxml){
-				return !!aider.ATTR(item,name,isxml,true);
+				return aider.ATTR(item,name,isxml,true);
 			},
 			//hasClass
 			CLASS: function(){
 				var cache = {};
-				return function(item,name){
-					return (cache[name] || (cache[name] = new RegExp('(?:^|\\s*)'+name+'(?:\\s*|$)','i'))).test(name);
+				return function(item,name,isxml){
+					return (cache[name] || (cache[name] = new RegExp('(?:^|\\s*)'+name+'(?:\\s*|$)','i'))).test(item[isxml?'class':'className']);
 				}
 			}()
 		}
@@ -239,7 +279,6 @@ var iCeet 	= function(selector,context){
 			if ( aider.isXPath(selector) ) {
 				
 				return iCeet.xpath(selector,context,isxml);
-				
 			} else {
 				//deal with the quick selector #id,.class,tagname
 				if ( match = selector.match(rquick) ) {
@@ -278,9 +317,9 @@ var iCeet 	= function(selector,context){
 					}
 				}
 			} catch ( e ) {}
+			
 			return ret;
 		},
-		
 		direct: function(selector,context,isxml){
 			
 			var result,item,owner,match=[],child=[],pseudo=[];
@@ -305,46 +344,174 @@ var iCeet 	= function(selector,context){
 				( match[0])[0] !==1 ) && ( match.unshift([1,0,'*']));
 				( (owner = match.shift()) && ( match[0][1] === '#')) &&
 						( owner = match.splice(1,1,owner)[0] );
-				
+				//获取资源
 				( (owner = iCeet.meta(owner[2],owner[1],context,isxml)) 
 						   instanceof Array) || (owner = [owner]);
+			
 				//计算child伪类
-				( child.length ) && (owner = iCeet.child(owner,child,isxml));
+				( child.length ) && (owner = iCeet.child(owner,child[0],isxml));
 				
 				//过滤属性
 				if ( match.length ) {
 					result = aider.iterate(owner,function(item,idx){
-						return iCeet.filter(item,match,isxml,owner);
+						var mat,i=0;
+						while(mat = match[i++]){
+							if( mat[0] == 1 ? ! aider.FILTER[mat[1] ? mat[1] ==='#' 
+									? 'ID' : 'CLASS' : 'TAG'](item,mat[2],isxml) : !iCeet.attr(item,mat,isxml)){
+								return false;
+							}
+						}
+						return true;
 					});
 				}
 				//过滤伪类
 				if ( pseudo.length ) {
-					result = iCeet.pseudo(result||owner,pseudo);
+					return aider.iterate(result || owner,function(item,idx,_,result){
+						var mat,i=0,pse,filter;
+						while(mat=pseudo[i++]){
+							//filters
+							if( filter = iCeet.filters[pse=mat[1]] || iCeet.posFilters[pse] ){
+								if(false == filter(item,idx,mat,result)){
+									return false;
+								}
+							} else {
+								return false;
+							}
+						}
+						return true;
+					});
 				}
 			}
-			return result;
+			return result || owner || [];
 		},
 		compose: function(selector,context){},
-		filter: function(item,match,isxml,result){
+		attr: function(item,match,isxml){
 			
-			var item , idx =0;
-			while ( item = match[idx++] ) {
-				//filter the self selector
-				if ( item[0] ==1 ){
-					
-				} else {
-					
-				}
+			var val = match[3],
+				nval   = aider.FILTER.ATTR(item,match[1],isxml);
+				
+			if ( val === UNDEF ) {
+				return val === true || val === '';
 			}
-			return true;
+			switch( match[2] ){
+				case '=':
+					return val === nval;
+				case '!=':
+					return val !== nval;
+				case '^=':
+					return val.indexOf(nval) === 0;
+				case '$=':
+					return val.substr(-nval.length) === nval;
+				case '*=':
+					return val.indexOf(nval) > -1;
+				case '|=':
+					return val == nval || val.indexOf(nval+'-') === 0;
+				case '~=':
+					return val.indexOf(nval+' ') >-1 || val.indexOf(' '+nval)>-1;
+			}
+			
+			return false;
 		},
-		attr: function(){},
-		pseudo: function(){},
-		child: function(){},
-		posFilters:{},
-		filters: {},
+		child: function(){
+			var filter = function(){};
+			
+			return function(owner,child,isxml){
+				
+			}
+		}(),
+		posFilters:{
+			even: function(_,i){
+				return (i+1) % 2 === 0;
+			},
+			odd: function(_,i){
+				return (i+1) % 2 === 1;
+			},
+			eq: function(_,i,match,result){//支持 :eq(-1) :nth(-1)
+				//return match[6] ^ 0 === i;
+				return ( ( (_= match[2]^0)<0 ) ? result.length - _ :  _) === i;
+			},
+			nth: function(_,i,match,result){
+				return ( ( (_= match[2]^0)<0 ) ? result.length - _ :  _) === i;
+			},
+			gt: function(_,i,match){
+				return (match[2] ^ 0) > i;
+			},
+			lt: function(_,i,match){
+				return (match[2] ^ 0) < i;
+			},
+			first: function(_,i){
+				return i === 0;
+			},
+			last: function(_,i,_,result){
+				return i === result.length - 1;
+			}
+		},
+		filters: {
+			//以下为伪类的相关辅助函数
+			enabled: function(item){
+				return item.disabled === false;
+			},
+			disabled: function(item){
+				return item.disabled === true;
+			},
+			checked: function(item){
+				return (item.nodeName == 'INPUT' && !!item.checked ) || (item.nodeName == 'OPTION' && !!item.selected);
+			},
+			selected: function(item){
+				item.parentNode && item.parentNode.selectedIndex;//fixed the bugs
+				return !!item.selected;
+			},
+			parent: function(item){//匹配有子元素的元素
+				return !!item.lastChild;
+			},
+			empty:function(item){
+				return !item.lastChild;
+			},
+			has: assert.hasnot(true),
+			not: assert.hasnot(false),
+			header: function(item){//匹配 标题标签
+				return rheader.test(item.nodeName);
+			},
+			text: function(item){
+				return item.nodeName == 'INPUT' && item.type == 'text';
+			},
+			radio: aider.creatinp('radio'),
+			checkbox: aider.creatinp('checkbox'),
+			file: aider.creatinp('file'),
+			password: aider.creatinp('password'),
+			image: aider.creatinp('image'),
+			submit: function(item){
+				return rformact.test(item.nodeName) && item.type =='submit';
+			},
+			reset: function(item){
+				return rformact.test(item.nodeName) && item.type == 'reset';
+			},
+			button: function(item){
+				return item.nodeName == 'BUTTON' || (item.nodeName == 'INPUT' && item.type =='button');
+			},
+			input: function(item){
+				return rinputs.test(item.nodeName);
+			},
+			focus: function(item){
+				return !!(item.href || item.type) && (item === item.ownerDocument.activeElement);
+			},
+			active: function(item){
+				return item === item.ownerDocument.activeElement;
+			},			
+			contains: function(item,_,match){//包含指定文本的元素
+				return ~((item.innerText||item.textContent||aider.getText(item)).indexOf(match[2]));
+			},
+			target: function(){
+				var hash = (DOC.defaultView || DOC.parentWindow).location.hash.slice(1);
+				return (item.id || item.name) === hash;
+			},
+			root: function(item){
+				return item === (item.ownerDocument||item.document).documentElement;
+			},
+			visible: aider.visible(true),
+			hidden: aider.visible(false)
+		},
 		iceet: '1.0'
 	});
-	
 	Global.iCeet = iCeet;
 })(this,document)
