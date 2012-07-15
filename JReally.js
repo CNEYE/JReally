@@ -94,7 +94,8 @@
 		}(),
 		//简单选择器
 		DIRECT : function(muster,context,itself,result){
-			
+			console.log(muster);
+			alert
 			if(typeof muster == 'string'){
 				muster = muster.match(exprsimple);
 			}
@@ -106,7 +107,7 @@
 		COMPOSE : function(selector,context){
 			
 			var muster = selector.split(exprcomb),front = null,ret = [];
-			
+			console.log(muster);
 			for(var i=0,len=muster.length;i<len;i++){
 				
 				switch(muster[i]){
@@ -130,13 +131,15 @@
 							}));
 						break;
 					case '~':
+						console.log(front);
 						front = this.DIRECT(muster[++i],
 							this.ITERATE(front,function(item){
-								var ret =[];
+								var ret =[],nodeName = item.nodeName;
 								do{
 									item = item.nextSibling;
-									item && item.nodeType ==1 && ret.push(item);
+									item && item.nodeType ==1 && item.nodeName == nodeName && ret.push(item);
 								}while(item);
+								console.log(ret);
 								return ret;
 							}));
 						break;

@@ -6,7 +6,7 @@
  * author iceet <iceet@uoeye.com>
  */
  
-(function(Global,DOC){
+(function(Global,DOC,undefined){
 var iCeet 	= function(selector,context){
 		return iCeet.query(selector,context || DOC);
 	},
@@ -14,9 +14,18 @@ var iCeet 	= function(selector,context){
 	expando = 'iceet'+uuid,
 	aider 	= function(fn,div){fn(div=DOC.createElement('div'));div=null},
 	mix 	= function(target,source){for(var p in source){target[p]=source[p]}},
-	bone 	= function(a,v,ia){var ret={};a = a.match ? a.split(','):a;ia=(v instanceof Array);for(var i=0,len=a.length;i<len;i++){ret[a[i]]=ia?v[i]:v}},
-
+	bone 	= function(a,v,ia){var ret={};a = a.match ? a.split(','):a;
+			ia=(v instanceof Array);for(var i=0,len=a.length;i<len;i++){ret[a[i]]=ia?v[i]:v}},
+	
+	rxpath  = /(^[@\/]|node\(\)|^[^\/]+\/{1,2}\w+|\.\.|\[@)/i,
+	rquick  = /^([#.]?)(\w+)$/,
+	//the selector splitter
+	rsplit  = /\s*([+,~>\s])[^\w=+~>\.#]?\s*/,
+	rexcis  = /(?:([#.]?)(\w+\\:\w+|\w+)|(?:\[([\w-_]+)([^\w'"]+)['"]?([^'"\]]+)['"]?\])|(?::([\w-]+)(?:\(([^\)]+)\))?))/g,
+	rchild  = /(nth|first|last|only)-(child|of-type|last-child|last-of-type)/i，
+	
 	PUSH 	= Array.prototype.push,
+	UNDEF	= undefined,
 	//buggy list 
 	BUGGY 	= {};
 	//check the buggy
@@ -44,20 +53,18 @@ var iCeet 	= function(selector,context){
 		//class -> className ...
 		//href modified ?
 		if ( e = div.lastChild ) {
-
-			if(e.getAttribute('href') !== '#' || !e.getAttribute('class')){
+			if ( e.getAttribute('href') !== '#' || !e.getAttribute('class') ) {
 				BUGGY.attr = true;
 			}
 		}
 		//in opera 9.6 cant match the second class
-		if(!DOC.getElementsByClassName || !div.getElementsByClassName('e').length || 
-		   	(div.firstChild.className ='e') && div.getElementsByClassName('e').length ==1){
+		if ( !DOC.getElementsByClassName || !div.getElementsByClassName('e').length || 
+		   	(div.firstChild.className ='e') && div.getElementsByClassName('e').length ==1 ){
 			BUGGY.class = true;
 		}
 		
 		//add the position or non-standard  pseudo and the 
 		BUGGY.detect.push(':nth|:first|:even|:odd|:eq|:last|:gt|:lt|:visible|:hidden');
-		
 		
 		BUGGY.detect = BUGGY.detect.length ? new RegExp(BUGGY.detect.join('|')) : true;
 	});
@@ -68,7 +75,7 @@ var iCeet 	= function(selector,context){
 			return documentElement ? documentElement.nodeName !== 'HTML' : false;
 		},
 		isXPath: function(selector){
-			return 
+			return rxpath.test(selector); 
 		},
 		makeArray: function(target,newly){
 			try {
@@ -81,8 +88,11 @@ var iCeet 	= function(selector,context){
 			}
 			return target;
 		},
-		unique: function(){
+		unique: function(items){
 			
+			var ret = [];
+			
+			return (iCeet.unique = false) || ret;
 		},
 		buggy: function(){},
 		//check the a include b?
@@ -98,36 +108,40 @@ var iCeet 	= function(selector,context){
 					if (res === true) {
 						ret.push(result[idx]);
 					} else {
-						res.length !== undefined ? aider.makeArray(ret,res)
+						res.length !== UNDEF ? aider.makeArray(ret,res)
 							: res.nodeType !==3 && ret.push(res);
 					}
 				}
 			}
-			
-			(typeof after === 'function') && after(result);
+			after && after(result);
 
 			return ret;
 		},
 		ID: function(){
-			return BUGGY.idname ? function(name){
-				var res = DOC.getElementById(name);
-				if(res.id !== name){
-					var elems = document.all[name] ,i=0,item;
-					while(item = elems[i++]){
-						if(item.id === name){
-							return item;
+			return BUGGY.idname ? function(name,context,isxml){
+				if( !isxml ){
+					var res = DOC.getElementById(name);
+					if(res.id !== name){
+						var elems = document.all[name] ,i=0,item;
+						while(item = elems[i++]){
+							if(item.id === name){
+								return item;
+							}
 						}
 					}
+					return res;
 				}
-				return res;
-			 	} : function(name){
-				return DOC.getElementById(name);	
+				return aider.XATTR('id',name,context,isxml);
+			 	} : function(name,context,isxml){
+					if( !isxml ) {
+						return DOC.getElementById(name);	
+					}
+					return aider.XATTR('id',name,context,isxml)
 			}
 		}(),
-		//杩欓噷瑕佹敞鎰忎娇鐢ㄥ懡鍚嶇┖闂寸殑
-		//杩欓噷瑕佽€冭檻xml鐨勬儏鍐�
-		TAG: function(name,context,isxml){
-			var method = 'getElementsByTagName',ret = [],i=0,namespace,res,e;
+		TAG function(name,context,isxml){
+
+			var method = 'getElementsByTagName',ret = [],i=0,namespace,res,item;
 
 			if((isxml || name.indexOf(':')>-1) && context.lookupNamespaceURI){
 				
@@ -141,29 +155,34 @@ var iCeet 	= function(selector,context){
 			if ( (res = namespace ? context[method](namespace,name) 
 				  	: context[method](name)) && res.length ){
 
-				while(e=res[i++]){
-					e.nodeType === 1 && ret.push(e);
+				while ( item = res[i++] ) {
+					item.nodeType === 1 && ret.push( item );
 				}
 			}
 			return ret;
 		},
 		//get classname
 		CLASS: function(){
-			
-			return BUGGY.class ? function(name,context){
-				var ret = [] ,res = DOC.getElementsByTagName('*') ,i =0,item;
-				while(item = res[i++]){
-					aider.FILTER.CLASS(item,name) && ret.push(item);
+			return BUGGY.class ? function(name,context,isxml){
+				if(!isxml){
+					var ret = [] ,res = DOC.getElementsByTagName('*') ,i =0,item;
+					while(item = res[i++]){
+						aider.FILTER.CLASS(item,name) && ret.push(item);
+					}
+					return ret;
 				}
-				return ret;
-			}: function(name,context){
-				return context.getElementsByClassName(name);
+				return aider.XATTR('class',name,context,isxml);
+			}: function(name,context,isxml){
+				if ( !isxml ) {
+					return context.getElementsByClassName(name);
+				}
+				return aider.XATTR('class',name,context,isxml)
 			};
 		}(),
 		//use xpath to get node filter attr
 		XATTR: function(name,value,context,doc){
-			var xpath = '//[*[@'+name+"='"+value+"']";
-			return iCeet.xpath(xpath,context,doc);
+			
+			return iCeet.xpath('//[*[@'+name+"='"+value+"']",context,doc);
 		},
 		//getAttribute('attr');
 		ATTR: function(){
@@ -210,11 +229,43 @@ var iCeet 	= function(selector,context){
 	});
 
 	mix(iCeet,{
-		query: function(selector,context){},
-		xpath: function(xpath,context,doc){
-			var ret = [],i=-1,item;
+		query: function(selector,context){
 			
-			try{
+			var result = [],match,type,
+				docu   = ( context = context||DOC ).ownerDocument || context,
+				isxml  = aider.isXML(context) && docu;
+			
+			//deal with the xpath selector
+			if ( aider.isXPath(selector) ) {
+				
+				return iCeet.xpath(selector,context,isxml);
+				
+			} else {
+				//deal with the quick selector #id,.class,tagname
+				if ( match = selector.match(rquick) ) {
+					return iCeet.meta( match[2],match[1],context,isxml);
+				} 
+				
+				//deal with the compose selector and system query
+				result  = aider.cbuggy(selector) && !isxml
+					? context.querySelectorAll(selector) 
+					: iCeet[rsplit.test(selector)?'compose':'direct'](selector,context,isxml);
+			}
+
+			return iCeet.unique ? aider.unique(result) : result;
+		},
+		//meta selector query
+		meta: function(value,type,context,isxml){
+			
+			return type ? (type === '#' 
+						? aider.ID(value,context,isxml) 
+						: aider.CLASS(value,context,isxml) )
+					: aider.TAG(value,context,isxml);
+		},
+		xpath: function(xpath,context,doc){
+			
+			var ret = [],i=-1,item;
+			try {
 				if ( Global.DOMParser ) {
 					var nodes = (doc || DOC).evaluate(xpath,context,null,7,null);
 					while(item = nodes.snapshotItem(++i)){
@@ -229,9 +280,64 @@ var iCeet 	= function(selector,context){
 			} catch ( e ) {}
 			return ret;
 		},
-		direct: function(){},
-		compose: function(){},
-		filter: function(){},
+		
+		direct: function(selector,context,isxml){
+			
+			var result,item,owner,match=[],child=[],pseudo=[];
+			
+			selector.replace(rexcis,function(allmach,$1,$2,$3,$4,$5,$6,$7){
+				if ( allmach ) {
+					if ( $6 === UNDEF ) {
+						return ( item = ($2 !== UNDEF ? [1,$1,$2] : 
+							   ( $3 !== UNDEF ? [2,$3,$4,$5] : false )) ) && match.push(item); 
+					}
+					//pseudo
+					$7 && ($7 = $7.toLowerCasse());
+					
+					rchild.test( $6 ) ? child.push([$6.toLowerCase(),$7]) : pseudo.push([$6.toLowerCase(),$7]);
+				}
+			});
+			//规则：
+			//	有E:nth-child(n)、E:nth-last-child(n)等先计算这种选择器，在过滤自身属性，灯
+			//  其他伪类则在最后计算
+			if ( match.length || child.length || pseudo.length ) {
+				//fixed not self selectors
+				( match[0])[0] !==1 ) && ( match.unshift([1,0,'*']));
+				( (owner = match.shift()) && ( match[0][1] === '#')) &&
+						( owner = match.splice(1,1,owner)[0] );
+				
+				( (owner = iCeet.meta(owner[2],owner[1],context,isxml)) 
+						   instanceof Array) || (owner = [owner]);
+				//计算child伪类
+				( child.length ) && (owner = iCeet.child(owner,child,isxml));
+				
+				//过滤属性
+				if ( match.length ) {
+					result = aider.iterate(owner,function(item,idx){
+						return iCeet.filter(item,match,isxml,owner);
+					});
+				}
+				//过滤伪类
+				if ( pseudo.length ) {
+					result = iCeet.pseudo(result||owner,pseudo);
+				}
+			}
+			return result;
+		},
+		compose: function(selector,context){},
+		filter: function(item,match,isxml,result){
+			
+			var item , idx =0;
+			while ( item = match[idx++] ) {
+				//filter the self selector
+				if ( item[0] ==1 ){
+					
+				} else {
+					
+				}
+			}
+			return true;
+		},
 		attr: function(){},
 		pseudo: function(){},
 		child: function(){},
@@ -242,4 +348,3 @@ var iCeet 	= function(selector,context){
 	
 	Global.iCeet = iCeet;
 })(this,document)
-192.168.4.38
