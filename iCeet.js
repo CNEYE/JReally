@@ -336,22 +336,21 @@ var iCeet 	= function(selector,context){
 					rchild.test( $6 ) ? child.push([$6.toLowerCase(),$7]) : pseudo.push([$6.toLowerCase(),$7]);
 				}
 			});
-			//规则：
-			//	有E:nth-child(n)、E:nth-last-child(n)等先计算这种选择器，在过滤自身属性，灯
-			//  其他伪类则在最后计算
+			
+			//the first deal with the selectors like this E:nth-child(n)
 			if ( match.length || child.length || pseudo.length ) {
 				//fixed not self selectors
 				( match[0])[0] !==1 ) && ( match.unshift([1,0,'*']));
 				( (owner = match.shift()) && ( match[0][1] === '#')) &&
 						( owner = match.splice(1,1,owner)[0] );
-				//获取资源
+				//get the resuouce
 				( (owner = iCeet.meta(owner[2],owner[1],context,isxml)) 
 						   instanceof Array) || (owner = [owner]);
 			
-				//计算child伪类
+				//deal width the child pseudo
 				( child.length ) && (owner = iCeet.child(owner,child[0],isxml));
 				
-				//过滤属性
+				//deal with the attribute
 				if ( match.length ) {
 					result = aider.iterate(owner,function(item,idx){
 						var mat,i=0;
@@ -364,7 +363,7 @@ var iCeet 	= function(selector,context){
 						return true;
 					});
 				}
-				//过滤伪类
+				//deal with the pseudo
 				if ( pseudo.length ) {
 					return aider.iterate(result || owner,function(item,idx,_,result){
 						var mat,i=0,pse,filter;
@@ -426,7 +425,7 @@ var iCeet 	= function(selector,context){
 			odd: function(_,i){
 				return (i+1) % 2 === 1;
 			},
-			eq: function(_,i,match,result){//支持 :eq(-1) :nth(-1)
+			eq: function(_,i,match,result){//support :eq(-1) :nth(-1)
 				//return match[6] ^ 0 === i;
 				return ( ( (_= match[2]^0)<0 ) ? result.length - _ :  _) === i;
 			},
@@ -447,7 +446,6 @@ var iCeet 	= function(selector,context){
 			}
 		},
 		filters: {
-			//以下为伪类的相关辅助函数
 			enabled: function(item){
 				return item.disabled === false;
 			},
@@ -461,7 +459,7 @@ var iCeet 	= function(selector,context){
 				item.parentNode && item.parentNode.selectedIndex;//fixed the bugs
 				return !!item.selected;
 			},
-			parent: function(item){//匹配有子元素的元素
+			parent: function(item){//match some nodes who has child node
 				return !!item.lastChild;
 			},
 			empty:function(item){
@@ -469,7 +467,7 @@ var iCeet 	= function(selector,context){
 			},
 			has: assert.hasnot(true),
 			not: assert.hasnot(false),
-			header: function(item){//匹配 标题标签
+			header: function(item){//match the html header tag
 				return rheader.test(item.nodeName);
 			},
 			text: function(item){
@@ -498,7 +496,7 @@ var iCeet 	= function(selector,context){
 			active: function(item){
 				return item === item.ownerDocument.activeElement;
 			},			
-			contains: function(item,_,match){//包含指定文本的元素
+			contains: function(item,_,match){
 				return ~((item.innerText||item.textContent||aider.getText(item)).indexOf(match[2]));
 			},
 			target: function(){
